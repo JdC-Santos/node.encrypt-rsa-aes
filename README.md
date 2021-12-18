@@ -1,0 +1,1 @@
+# Repositório para estudar sobre criptografia.

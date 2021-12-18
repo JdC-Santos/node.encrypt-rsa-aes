@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Criptografia Hibrida</title>
+</head>
+<body ng-app="myApp" ng-controller="myCtrl">
+  <script src="node_modules/angular/angular.min.js"></script>
+  <script src="config.js"></script>
+  <script src="node_modules/jsencrypt/bin/jsencrypt.min.js"></script>
+  <script src="node_modules/crypto-js/crypto-js.js"></script>
+  
+  <script>
+    var myApp = angular.module('myApp',[]);
+
+    myApp.controller('myCtrl', function($scope, $http, API) {
+
+      $scope.getPublicKey = function() {
+        $http.get(API + '/generate-key-pair')
+          .then(function(data){
+
+            if (!data.success) throw new Error(data.msg);
+
+            console.log(data.publicKey)
+
+            $scope.publicKey = data.publicKey;
+
+          })
+          .catch(function(e) {
+            console.log(e);
+          });
+      }
+
+      var publicKey = "-----BEGIN PUBLIC KEY----- ... -----END PUBLIC KEY-----";
+      
+      var crypt = new JSEncrypt();
+      crypt.setKey(publicKey);
+
+      var text = 'mensagem secreta';
+      // Encrypt the data with the public key.
+      var enc = crypt.encrypt(text);
+      console.log(enc);
+
+      crypt.setKey("-----BEGIN RSA PRIVATE KEY----- ... -----END RSA PRIVATE KEY-----")
+
+      // Now decrypt the crypted text with the private key.
+      var dec = crypt.decrypt(enc);
+
+      console.log(dec);
+    })
+  </script>
+</body>
+</html>
