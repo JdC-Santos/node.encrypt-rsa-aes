@@ -1,53 +1,63 @@
-const { generateKeyPair } = require('./utils/RSA');
+require('dotenv').config();
+
+const cryptMiddleware =  require('./middlewares/cryptMiddleware');
+const RSA     = require('./utils/RSA');
+const AES     = require('./utils/AES');
 const express = require('express');
+const cors    = require('cors');
 const app     = express();
 
-app.get('/generate-key-pair', (req, res) => {
+app.use(cors());
+
+app.use(express.urlencoded({ extended: true}))
+app.use(express.json());
+
+app.get('/get-public-key', (req, res) => {
   try {
-    const publicKey = generateKeyPair('cert', 1048);
-
-    res.json({ success: true, data: publicKey });
-  } catch(e) {
-    console.log(e);
-    res.send('ERRO: ' + e.message);
-  }
-});
-
-app.post('/', function(req, res) {
-  try {
-
-  } catch(e) {
-    console.log(e);
-    res.send('erro: '+ e.message);
-  }
-});
-
-app.get('/', function(req, res) {
-  try {
-
-  } catch(e) {
-    console.log(e);
-    res.send('erro: '+ e.message);
-  }
-});
-
-app.listen(3399,() => {  
-  // const key = new NodeRSA({b: 2048});
-
-  // var publicDer = key.exportKey('public');
-  // var privateDer = key.exportKey('private');
-
-  // console.log(publicDer)
-  // console.log(privateDer);
-
-  // const key = new NodeRSA('-----BEGIN RSA PRIVATE KEY----- ... -----END RSA PRIVATE KEY-----');
-
-  
-  // key.setOptions({encryptionScheme: 'pkcs1'});
-  // const decrypted = key.decrypt(text, 'utf8');
-  // console.log('decrypted: ', decrypted);
-
-  // console.log(decrypted);
+    // recupera a chave publica do mes atual
+    const publicKey = RSA.getPublicKey();
     
-  console.log('ouvindo na porta 3399');
+    res.json({ success: true, key: publicKey });
+  } catch(e) {
+    res.json({success: false, message: 'Erro ao recuperar a chave publica.', error: e.message});
+  }
+});
+
+// requisições com o body encriptado
+app.post('/message', cryptMiddleware, (req, res) => {
+  try {
+    // recebe normalmente os dados após o middleware decriptar
+    const { message } = req.body;
+
+    // encripta a resposta
+    const text = AES.encrypt({ success: true, message: `mensagem encriptada: ${message}` }, res.AESKey);
+
+    // retorna os dados encriptados e o campo CODE para que o FRONT possa identificar qual chave deve usar para decriptar esta response
+    res.json({enc: text, enc_id: req.enc_id});
+  } catch(e) {
+    console.log(e);
+    res.json({success: false, message: 'Ops, ocorreu um erro no servidor.', error: e.message});
+  }
+});
+
+// requisições com os parametros da URL encriptados
+app.get('/message', cryptMiddleware, (req, res) => {
+  try {
+
+    // recebe normalmente os dados após o middleware decriptar
+    const { message } = req.query;
+
+    // encripta a resposta
+    const text = AES.encrypt({ success: true, message: `mensagem encriptada: ${message}` }, res.AESKey);
+
+    // retorna os dados encriptados e o campo CODE para que o FRONT possa identificar qual chave deve usar para decriptar esta response
+    res.json({enc: text, enc_id: req.enc_id});
+  } catch(e) {
+    console.log(e);
+    res.json({success: false, message: 'Ops, ocorreu um erro no servidor.', error: e.message});
+  }
+});
+
+app.listen(process.env.PORT,() => {
+  console.log(`ouvindo na porta ${process.env.PORT}`);
 });
